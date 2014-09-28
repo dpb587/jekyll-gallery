@@ -84,12 +84,13 @@ The export option will accept values like:
             // manipulate
 
             foreach ($photos as $i => $photo) {
-                $output->write($photo['id'] . '...');
+                $output->write('<info>' . $photo['id'] . '</info>');
+
+                $photo['sizes'] = [];
 
                 // image exports
                 if (0 < count($exports)) {
                     $sourceJpg = $imagine->open($photo['path']);
-                    $sourceSize = $sourceJpg->getSize();
 
                     if (isset($photo['exif']['Orientation'])) {
                         switch ($photo['exif']['Orientation']) {
@@ -130,8 +131,12 @@ The export option will accept values like:
                         }
                     }
 
+                    $sourceSize = $sourceJpg->getSize();
+
+                    $output->write('[' . $sourceSize->getWidth() . 'x' . $sourceSize->getHeight() . ']...');
+
                     foreach ($exports as $export) {
-                        $output->write('<info>' . $export . '</info>...');
+                        $output->write('<comment>' . $export . '</comment>');
 
                         if (false !== strpos($export, 'x')) {
                             list($w, $h) = explode('x', $export);
@@ -141,14 +146,18 @@ The export option will accept values like:
                                 \Imagine\Image\ImageInterface::THUMBNAIL_OUTBOUND
                             );
                         } else {
-                            if ($sourceSize->getWidth() == max($sourceSize->getWidth(), $sourceSize->getHeight())) {
+                            if ('w' == substr($export, -1)) {
                                 $mx = (int) $export;
-                                $r = $mx / $sourceSize->getWidth();
-                                $my = $sourceSize->getHeight() * $r;
+                                $my = ($mx * $sourceSize->getHeight() ) / $sourceSize->getWidth();
+                            } elseif ('h' == substr($export, -1)) {
+                                $my = (int) $export;
+                                $mx = ($my * $sourceSize->getWidth() ) / $sourceSize->getHeight();
+                            } elseif ($sourceSize->getWidth() == max($sourceSize->getWidth(), $sourceSize->getHeight())) {
+                                $mx = (int) $export;
+                                $my = ($mx * $sourceSize->getHeight()) / $sourceSize->getWidth();
                             } elseif ($sourceSize->getHeight() == max($sourceSize->getWidth(), $sourceSize->getHeight())) {
                                 $my = (int) $export;
-                                $r = $my / $sourceSize->getHeight();
-                                $mx = $sourceSize->getWidth() * $r;
+                                $mx = ($my * $sourceSize->getWidth()) / $sourceSize->getHeight();
                             }
                             
                             $exportImage = $sourceJpg->thumbnail(
@@ -156,6 +165,15 @@ The export option will accept values like:
                                 \Imagine\Image\ImageInterface::THUMBNAIL_INSET
                             );
                         }
+
+                        $exportSize = $exportImage->getSize();
+
+                        $photo['sizes'][$export] = [
+                            'width' => $exportSize->getWidth(),
+                            'height' => $exportSize->getHeight(),
+                        ];
+
+                        $output->write('[' . $exportSize->getWidth() . 'x' . $exportSize->getHeight() . ']');
 
                         $exportPath = $assetPath . '/' . $photo['id'] . '~' . $export . '.jpg';
 
@@ -167,12 +185,14 @@ The export option will accept values like:
                         touch($exportPath, $photo['date']->getTimestamp());
 
                         $exportImage = null;
+
+                        $output->write('...');
                     }
 
                     $sourceJpg = null;
                 }
 
-                $output->write('<info>mdown</info>...');
+                $output->write('<comment>markdown</comment>...');
 
                 $matter = [
                     'layout' => $layout,
@@ -205,7 +225,25 @@ The export option will accept values like:
                     ];
                 }
 
+                if ($photo['sizes']) {
+                    $matter['sizes'] = $photo['sizes'];
+                }
+
                 ksort_recursive($matter);
+
+                uasort(
+                    $matter['sizes'],
+                    function ($a, $b) {
+                        $aa = $a['width'] * $a['height'];
+                        $bb = $b['width'] * $b['height'];
+
+                        if ($aa == $bb) {
+                            return 0;
+                        }
+
+                        return ($aa > $bb) ? -1 : 1;
+                    }
+                );
 
                 file_put_contents(
                     $renderPath . '/' . $photo['id'] . '.md',
