@@ -69,6 +69,12 @@ The export option will accept values like:
                     Yaml::parse($photoSplit[0])
                 );
 
+                if (isset($photo['comment']) && ('missing value' == trim($photo['comment']))) {
+                  unset($photo['comment']);
+                }
+
+                $photo['title'] = preg_replace('/.jpg$/', '', $photo['title']);
+
                 $photo['id'] = substr(sha1_file($photo['path']), 0, 7) . '-' . preg_replace('/(-| )+/', '-', preg_replace('/[^a-z0-9 ]/i', '-', preg_replace('/\'/', '', strtolower(preg_replace('/\p{Mn}/u', '', Normalizer::normalize($photo['title'], Normalizer::FORM_KD))))));
 
                 $photo['date'] = \DateTime::createFromFormat(
@@ -205,8 +211,8 @@ The export option will accept values like:
                     $matter['exif'] = [
                         'make' => $photo['exif']['Make'],
                         'model' => $photo['exif']['Model'],
-                        'aperture' => $photo['exif']['COMPUTED']['ApertureFNumber'],
-                        'exposure' => $photo['exif']['ExposureTime'],
+                        'aperture' => isset($photo['exif']['COMPUTED']['ApertureFNumber']) ? $photo['exif']['COMPUTED']['ApertureFNumber'] : null,
+                        'exposure' => isset($photo['exif']['ExposureTime']) ? $photo['exif']['ExposureTime'] : null,
                     ];
                 }
 

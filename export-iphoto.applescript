@@ -1,29 +1,32 @@
 on run argv
-	tell application "iPhoto"
+	tell application "Photos"
 		set vAlbum to first item of (get every album whose name is (item 1 of argv))
-		set vPhotos to get every photo in vAlbum
+		set vPhotos to get every media item in vAlbum
 		
 		set output to ""
 		
 		repeat with vPhoto in vPhotos
-			set output to output & Â
+			set loc to the location of vPhoto
+			set lati to (the first item of loc) as string
+			set longi to (the second item of loc) as string
+			set output to (output & Â
 				"altitude: " & altitude of vPhoto & "
 " & Â
-				"latitude: " & latitude of vPhoto & "
+				"longitude: " & longi & "
 " & Â
-				"longitude: " & longitude of vPhoto & "
+				"latitude: " & lati & "
 " & Â
-				"name: " & name of vPhoto & "
+				"name: " & filename of vPhoto & "
 " & Â
 				"date: " & date of vPhoto & "
 " & Â
-				"path: " & original path of vPhoto & "
+				"title: " & filename of vPhoto & "
 " & Â
-				"title: " & title of vPhoto & "
+				"path: /Users/dpb587/Downloads/2015 Balloon Fiesta/" & filename of vPhoto & "
 ------
-" & comment of vPhoto & "
+" & description of vPhoto & "
 ------------
-"
+")
 		end repeat
 		
 		return output
